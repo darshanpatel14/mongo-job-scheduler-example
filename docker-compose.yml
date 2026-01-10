@@ -1,0 +1,47 @@
+version: "3.8"
+
+services:
+  mongo:
+    image: mongo:6.0
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - scheduler_network
+
+  backend:
+    build: ./backend
+    ports:
+      - "3000:3000"
+    environment:
+      - MONGO_URL=mongodb://mongo:27017/scheduler
+      - WORKERS=5
+      - POLL_INTERVAL_MS=1000
+      - LOCK_TIMEOUT_MS=60000
+    depends_on:
+      - mongo
+    networks:
+      - scheduler_network
+    # Allow scaling
+    # docker-compose up --scale backend=3
+
+  scheduler-ui:
+    image: darshanbhut14/mongo-scheduler-ui:latest
+    ports:
+      - "5173:80"
+    environment:
+      - VITE_API_URL=http://localhost:3000 # For client-side fetching (browser -> backend)
+      # If SSR, might need internal url
+      - MONGO_URL=mongodb://mongo:27017/scheduler # If UI connects directly to DB (Admin mode)
+    depends_on:
+      - mongo
+    networks:
+      - scheduler_network
+
+networks:
+  scheduler_network:
+    driver: bridge
+
+volumes:
+  mongo_data:
