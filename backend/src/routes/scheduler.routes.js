@@ -95,8 +95,17 @@ router.put("/jobs/:id", async (req, res) => {
       return res.status(400).json({ error: "Invalid ID" });
 
     const { id } = req.params;
-    const { data, repeat, runAt, retry, priority, concurrency, dedupeKey } =
-      req.body;
+    const {
+      data,
+      repeat,
+      runAt,
+      lastScheduledAt,
+      retry,
+      priority,
+      concurrency,
+      dedupeKey,
+      maxExecutionMs,
+    } = req.body;
 
     // Check existence
     const existingJob = await scheduler.getJob(new ObjectId(id));
@@ -109,7 +118,16 @@ router.put("/jobs/:id", async (req, res) => {
     if (priority !== undefined) updates.priority = priority;
     if (concurrency !== undefined) updates.concurrency = concurrency;
     if (dedupeKey !== undefined) updates.dedupeKey = dedupeKey;
-    if (runAt) updates.nextRunAt = new Date(runAt);
+    if (maxExecutionMs !== undefined) updates.maxExecutionMs = maxExecutionMs;
+    // Update nextRunAt only if runAt is provided
+    if (runAt) {
+      updates.nextRunAt = new Date(runAt);
+    }
+    if (lastScheduledAt !== undefined) {
+      updates.lastScheduledAt = lastScheduledAt
+        ? new Date(lastScheduledAt)
+        : null;
+    }
 
     await scheduler.updateJob(new ObjectId(id), updates);
 
